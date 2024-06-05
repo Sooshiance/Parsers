@@ -198,3 +198,192 @@ void copyfollowfollow(char NT1, char NT2, int noNT)
         }
     }
 }
+
+void add2first(char NT1, int noRules, int noNT, int rhslen, int ruleno)
+{
+    rhslen = rhslen + 1;
+    // printf("\nNT=%c,ruleno=%d,rhslen=%d\t",NT1,ruleno,rhslen);
+    int i = 0, k = 0;
+    int j, index;
+    char NT2;
+    for (k = 0; k < rhslen;)
+    {
+        char NT2 = rules[ruleno].rhs[k];
+        if (!isNonTerminal(NT2, noRules))
+        {
+            // add that terminal to NT1
+            for (j = 0; j < noNT; j++)
+                if (firsts[j].c == NT1)
+                    break;
+            if (!isInFirSet(NT1, NT2, noNT))
+            {
+                index = firsts[j].len;
+                firsts[j].set[index] = NT2;
+                firsts[j].len++;
+                return;
+            }
+            // printf("\n");
+        }
+        else if (isNonTerminal(NT2, noRules))
+        {
+            int temp = 0;
+            for (j = 0; j < noRules; j++)
+            {
+                if ((rules[j].lhs == NT2) && isNonTerminal(rules[j].rhs[0], noRules))
+                {
+                    temp = 1;
+                    // printf("\n%c\t%s",rules[j].lhs,rules[j].rhs);
+                    add2first(NT2, noRules, noNT, rules[j].num, j);
+                    copyfirst(NT1, NT2, noRules);
+                }
+            }
+            if (temp == 0)
+            {
+                copyfirst(NT1, NT2, noRules);
+            }
+            // printf("\n");
+        }
+        if ((k == rhslen - 1) && isInFirSet(NT2, 'e', noNT))
+        {
+            // printf("\nk=%d,NT1=%c,NT2=%c\n",k,NT1,NT2);
+            int m;
+            int index;
+            for (m = 0; m < noNT; m++)
+                if (firsts[m].c == NT1)
+                    break;
+            if (!isInFirSet(NT1, 'e', noNT))
+            {
+                index = firsts[m].len;
+                firsts[m].set[index] = 'e';
+                firsts[m].len++;
+            }
+            return;
+        }
+        else if (isInFirSet(NT2, 'e', noNT) && (isNonTerminal(NT2, noRules)))
+        { // printf("JJJJJ\n");
+            k++;
+        }
+        else
+        { // printf("MMMMM\n");
+            return;
+        }
+    }
+    // printf("\n");
+}
+
+void add2follow(char ch, char NT1, int noNT)
+{
+    int j, index;
+    for (j = 0; j < noNT; j++)
+        if (follows[j].c == NT1)
+            break;
+    if (!isInFolSet(NT1, ch, noNT))
+    {
+        index = follows[j].len;
+        follows[j].set[index] = ch;
+        follows[j].len++;
+    }
+}
+
+int charIndexT(char c, char *term, int noT)
+{
+    int i;
+    if (c == '\0')
+        return -1;
+    for (i = 0; i < noT; i++)
+    {
+        if (c == term[i])
+            return i;
+    }
+    return -1;
+}
+
+int charIndexNT(char c, char *nonTerm, int noNT)
+{
+    int i;
+    if (c == '\0')
+        return -1;
+    for (i = 0; i < noNT; i++)
+    {
+        if (c == nonTerm[i])
+            return i;
+    }
+}
+
+void printTable(int TABLE[noNT][noT], char *term, char *nonTerm)
+{
+    printf("\nParsing Table\n\n");
+    int i, j;
+    for (i = 0; i < noT; i++)
+        printf("\t%c", term[i]);
+    printf("\n");
+    for (i = 0; i < noNT; i++)
+    {
+        printf("%c\t", nonTerm[i]);
+        for (j = 0; j < noT; j++)
+            printf("%d\t", TABLE[i][j]);
+        printf("\n");
+    }
+}
+
+void findfollow(int NT1, int noRules, int noNT)
+{
+    int i, j, k, x, m;
+    for (i = 0; i < noNT; i++)
+        if (follows[i].c == NT1)
+        {
+            if (follows[i].visited == 1)
+            {
+                return;
+            }
+            else
+            {
+                follows[i].visited = 1;
+                break;
+            }
+        }
+    for (j = 0; j < noRules; j++)
+    {
+        char next;
+        for (k = 0; k <= rules[j].num; k++)
+        {
+            if (k == rules[j].num)
+            {
+                if (rules[j].rhs[k] == NT1)
+                {
+                    findfollow(rules[j].lhs, noRules, noNT);
+                    copyfollowfollow(NT1, rules[j].lhs, noNT);
+                }
+            }
+            else if (rules[j].rhs[k] == NT1)
+            {
+                x = k;
+                next = rules[j].rhs[++x];
+                while (x < (rules[j].num + 1))
+                {
+                    int temp;
+                    if (!isNonTerminal(next, noRules))
+                    {
+                        add2follow(next, NT1, noNT);
+                        break;
+                    }
+                    else if (isNonTerminal(next, noRules))
+                    {
+                        copyfollowfirst(NT1, next, noNT);
+                        if (isInFirSet(next, 'e', noNT))
+                        {
+                            if (x == rules[j].num)
+                            {
+                                findfollow(rules[j].lhs, noRules, noNT);
+                                copyfollowfollow(NT1, rules[j].lhs, noNT);
+                            }
+                            else
+                                next = rules[j].rhs[x + 1];
+                        }
+                    }
+                    x++;
+                }
+            }
+        }
+    }
+}
