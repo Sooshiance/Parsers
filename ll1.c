@@ -387,3 +387,175 @@ void findfollow(int NT1, int noRules, int noNT)
         }
     }
 }
+
+int main()
+{
+    rules[0].lhs = 'E';
+    strncpy(rules[0].rhs, "TD", 2);
+    rules[0].num = 1;
+    rules[1].lhs = 'D';
+    strncpy(rules[1].rhs, "+TD", 3);
+    rules[1].num = 2;
+    rules[2].lhs = 'D';
+    strncpy(rules[2].rhs, "e", 1);
+    rules[2].num = 0;
+    rules[3].lhs = 'T';
+    strncpy(rules[3].rhs, "FU", 2);
+    rules[3].num = 1;
+    rules[4].lhs = 'U';
+    strncpy(rules[4].rhs, "*FU", 3);
+    rules[4].num = 2;
+    rules[5].lhs = 'U';
+    strncpy(rules[5].rhs, "e", 1);
+    rules[5].num = 0;
+    rules[6].lhs = 'F';
+    strncpy(rules[6].rhs, "(E)", 3);
+    rules[6].num = 2;
+    rules[7].lhs = 'F';
+    strncpy(rules[7].rhs, "i", 1);
+    rules[7].num = 0;
+
+    int i, j, k = 0;
+    int noRules = 8;
+    char NT, NT1, NT2;
+    printf("Rules. . .\n");
+    for (i = 0; i < noRules; i++)
+    {
+        printf("%c\t->\t", rules[i].lhs);
+        for (j = 0; j < (rules[i].num) + 1; j++)
+            printf("%c", rules[i].rhs[j]);
+        printf("\t%d\n", rules[i].num);
+    }
+    // nonTerminal calc
+    char arr[noRules];
+    char ch;
+    for (i = 0; i < noRules;)
+    {
+        ch = rules[i].lhs;
+        if (!inarr(arr, ch, noRules))
+            arr[k++] = ch;
+        else if (inarr(arr, ch, noRules))
+            i++;
+    }
+    printf("\n\n\n");
+    for (i = 0; i < k; i++)
+    {
+        firsts[i].c = arr[i];
+        follows[i].c = arr[i];
+    }
+    int index;
+    noNT = k;
+    char nonTerm[k];
+    for (i = 0; i < k; i++)
+        nonTerm[i] = arr[i];
+    // term calc
+    char term[40];
+    k = 0;
+    for (i = 0; i < noRules; i++)
+    {
+        int len;
+        len = rules[i].num + 1;
+        for (j = 0; j <= len; j++)
+        {
+            ch = rules[i].rhs[j];
+            if (!isNonTerminal(ch, noRules))
+            {
+                if ((!inarr(term, ch, noRules)) && ch != '\0' && ch != 'e')
+                {
+                    term[k++] = ch;
+                }
+            }
+        }
+    }
+    term[k++] = '$';
+    noT = k;
+    // printing non term and term. . .
+    printf("Terminals are. . .\n");
+    for (i = 0; i < noT; i++)
+        printf("%c\t", term[i]);
+    printf("\nNon-Terminals are. . .\n");
+    for (i = 0; i < noNT; i++)
+        printf("%c\t", nonTerm[i]);
+
+    // first set calculation
+    printf("\n\n");
+    for (i = 0; i < noRules; i++)
+    {
+        char first = 0;
+        char second = 0;
+        first = rules[i].rhs[0];
+        if (rules[i].num != 0)
+            second = rules[i].rhs[1];
+        if (!isNonTerminal(first, noRules))
+        {
+            NT = rules[i].lhs;
+            for (j = 0; j < noNT; j++)
+                if (firsts[j].c == NT)
+                    break;
+            if (!isInFirSet(NT, first, noNT))
+            {
+                index = firsts[j].len;
+                firsts[j].set[index] = first;
+                firsts[j].len++;
+            }
+        }
+    }
+    /*printf("first set. . .\n");
+    for(i=0;i<noNT;i++)
+    {
+        printf("%c\tlen=%d\t%s\n",firsts[i].c,firsts[i].len,firsts[i].set);
+    }*/
+
+    for (i = 0; i < noRules; i++)
+    {
+        char first = 0;
+        char second = 0;
+        first = rules[i].rhs[0];
+        if (rules[i].num != 0)
+            second = rules[i].rhs[1];
+        if (isNonTerminal(first, noRules))
+        {
+            NT1 = rules[i].lhs;
+            add2first(NT1, noRules, noNT, rules[i].num, i);
+            // printf("\n");
+            // add2first(NT1,NT2,noRules,noNT);
+        }
+    }
+    /*
+    for(i=0;i<noRules;i++)
+    {
+        char first=0;
+        first = rules[i].rhs[0];
+        if(isNonTerminal(first,noRules))
+        {
+            NT1 = rules[i].lhs;
+            NT2 = rules[i].rhs[0];
+            printf("\n");
+            add2first(NT1,NT2,noRules,noNT);
+        }
+    }*/
+    printf("first set. . .\n");
+    for (i = 0; i < noNT; i++)
+    {
+        printf("%c\tlen=%d\t%s\n", firsts[i].c, firsts[i].len, firsts[i].set);
+    }
+    // follow set calculation
+    add2follow('$', follows[0].c, noNT);
+    for (i = 0; i < noNT; i++)
+    {
+        NT1 = follows[i].c;
+        findfollow(NT1, noRules, noNT);
+        printf("\n");
+    }
+    printf("follow set. . .\n");
+    for (i = 0; i < noNT; i++)
+    {
+        printf("%c\tlen=%d\t%s\n", follows[i].c, follows[i].len, follows[i].set);
+    }
+    // terminals
+    printf("\n\n");
+
+    // making table for predictive parsing
+    int TABLE[noNT][noT];
+    int Tind, NTind;
+}
